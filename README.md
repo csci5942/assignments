@@ -21,6 +21,7 @@ Related resources:
 | | Assignment | Released | Writeup |
 | :--- | :--- | :--- | :--- |
 | **A0** | Compute Account Setup | 8/20 | [assignment_0.md](assignment_0.md) |
+| **A1** | Transformers on Shakespeare, from scratch | 8/27 | [README_A1.md](./assignment-1/README.md) |
 
 Release dates follow the [course schedule](https://csci5942.github.io/schedule/).
 Due dates are announced in Slack and are authoritative on Gradescope.
