@@ -1,0 +1,1 @@
+{"name": "nano",  "n_layer": 2, "n_head": 2, "n_embd": 64,  "dropout": 0.0, "block_size": 256, "batch_size": 64, "max_iters": 5000, "eval_interval": 250, "warmup_iters": 200, "learning_rate": 1e-3, "lr_min": 1e-4, "weight_decay": 0.1, "compile": true}
