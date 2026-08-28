@@ -144,7 +144,7 @@ def main():
             _, loss = model(x, y)
         optimizer.zero_grad(set_to_none=True)
         scaler.scale(loss).backward()
-        scaler.unscale_(optimizer)          # clip real gradients, not scaled ones
+        scaler.unscale_(optimizer) 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         scaler.step(optimizer)
         scaler.update()
