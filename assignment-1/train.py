@@ -31,13 +31,19 @@ def get_batch(split_data: np.ndarray, block_size: int, batch_size: int, device: 
     return x.to(device, non_blocking=True), y.to(device, non_blocking=True)
 
 
+def amp_dtype_for(device: str) -> torch.dtype:
+    if device != "cuda":
+        return torch.float32
+    return torch.bfloat16 if torch.cuda.get_device_capability()[0] >= 8 else torch.float16
+
+
 @torch.no_grad()
-def estimate_loss(model, data, block_size, batch_size, device, iters=40):
+def estimate_loss(model, data, block_size, batch_size, device, amp_dtype, iters=40):
     model.eval()
     losses = torch.zeros(iters)
     for i in range(iters):
         x, y = get_batch(data, block_size, batch_size, device)
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=device == "cuda"):
+        with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=device == "cuda"):
             _, loss = model(x, y)
         losses[i] = loss.item()
     model.train()
@@ -87,7 +93,9 @@ def main():
     )
     model = GPT(mcfg).to(device)
     n_params = model.num_params()
-    print(f"run {run_name}: {n_params:,} non-embedding params, device {device}")
+    amp_dtype = amp_dtype_for(device)
+    print(f"run {run_name}: {n_params:,} non-embedding params, device {device}, "
+          f"autocast {str(amp_dtype).replace('torch.', '')}")
 
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -97,6 +105,8 @@ def main():
     )
     if cfg.get("compile", True) and device == "cuda":
         model = torch.compile(model)
+
+    scaler = torch.amp.GradScaler("cuda", enabled=(amp_dtype == torch.float16))
 
     log_path = os.path.join(out_dir, "log.csv")
     with open(log_path, "w") as f:
@@ -111,8 +121,8 @@ def main():
             g["lr"] = lr
 
         if step % cfg["eval_interval"] == 0 or step == cfg["max_iters"]:
-            train_loss = estimate_loss(model, train_data, cfg["block_size"], cfg["batch_size"], device)
-            val_loss = estimate_loss(model, val_data, cfg["block_size"], cfg["batch_size"], device)
+            train_loss = estimate_loss(model, train_data, cfg["block_size"], cfg["batch_size"], device, amp_dtype)
+            val_loss = estimate_loss(model, val_data, cfg["block_size"], cfg["batch_size"], device, amp_dtype)
             tokens = step * tokens_per_iter
             flops = 6 * n_params * tokens
             secs = time.time() - t0
@@ -130,12 +140,14 @@ def main():
             break
 
         x, y = get_batch(train_data, cfg["block_size"], cfg["batch_size"], device)
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=device == "cuda"):
+        with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=device == "cuda"):
             _, loss = model(x, y)
         optimizer.zero_grad(set_to_none=True)
-        loss.backward()
+        scaler.scale(loss).backward()
+        scaler.unscale_(optimizer) 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        optimizer.step()
+        scaler.step(optimizer)
+        scaler.update()
 
     summary = {"name": run_name, "n_params": n_params, "best_val_loss": best_val,
                "max_iters": cfg["max_iters"], "tokens": cfg["max_iters"] * tokens_per_iter,
