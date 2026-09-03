@@ -210,7 +210,7 @@ and the flip counts, and a screenshot of the scored traces.
 
 ## Part 5: Perturbing the judge
 
-The judge is model, so it is also an eval target. Perturb its prompt twice and
+The judge is a model, so it is also an eval target. Perturb its prompt twice and
 measure how much your Part 4 numbers move.
 
 1. **Paraphrase the rubric.** Add a `shakespeare_v2` entry to the
@@ -220,7 +220,26 @@ measure how much your Part 4 numbers move.
 2. **Reorder the axes.** In `POINTWISE_PROMPT`, move style_match first
    and grammar last. Rerun the original `shakespeare` rubric.
 
-Both runs score the same 50 samples as Part 4, so differences are only as a
+```bash
+# after step 1's edit to RUBRICS, before step 2's edit to POINTWISE_PROMPT
+python judge.py --results results/base.json --rubric shakespeare_v2 --tag paraphrase
+
+# after step 2's edit to POINTWISE_PROMPT
+python judge.py --results results/base.json --rubric shakespeare --tag axes-reordered
+```
+
+Do the two edits one at a time, in that order. A reordered prompt still
+in place for the paraphrase run puts both perturbations in one number.
+
+Keep `--tag`. Step 2 names the same rubric as your first Part 4 run, so
+without a tag it writes the same `results/judge-base-shakespeare.json`
+and the same Opik score names: your Part 4 baseline is gone, and nothing
+in the file that replaced it says which prompt produced those numbers.
+Every judge.py output records the prompt it ran with and a hash of it,
+and a run that is about to replace a file written under a different
+prompt says so before it starts.
+
+All three runs score the same 50 samples, so differences are only as a
 result of the prompt. Put the three pointwise means side by side with their
 CIs.
 

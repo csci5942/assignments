@@ -20,7 +20,17 @@ eval.py created (their ids are in the results JSON) and each pairwise
 comparison becomes its own trace. --no-opik skips that. Every run prints
 a summary with 95% confidence intervals and writes a JSON to results/.
 
-Part 5 edits two things in this file: RUBRICS and POINTWISE_PROMPT.
+Part 5 edits two things in this file: RUBRICS and POINTWISE_PROMPT. An
+edited prompt with an unchanged rubric writes the same filename and the
+same Opik score names as the run before it, so pass --tag to keep the
+two apart:
+
+    python judge.py --results results/base.json --rubric shakespeare \
+        --tag axes-reordered
+
+Every output JSON records the prompt it was produced with (its text and
+a sha256), and a run that would overwrite a file written under a
+different prompt says so before it does.
 """
 
 import argparse
@@ -99,6 +109,35 @@ SAMPLE B:
 {b}
 >>>
 """
+
+
+# ----------------------------------------------------------- provenance
+
+def prompt_record(template, rubric_text):
+    """The judge prompt this run used. Part 5 perturbs the
+    prompt while the rubric name stays put, so the filename alone cannot
+    tell two runs apart; this can."""
+    text = template.replace("{rubric}", rubric_text)
+    return {"sha256": hashlib.sha256(text.encode()).hexdigest()[:16],
+            "template": template, "rubric_text": rubric_text}
+
+
+def warn_if_prompt_differs(out_path, record):
+    """A run that replaces a file produced under a different prompt is
+    almost always Part 5 without --tag. Say so; do not refuse, because a
+    plain rerun after a failed judge call is legitimate."""
+    if not os.path.exists(out_path):
+        return
+    try:
+        with open(out_path, encoding="utf-8") as f:
+            previous = json.load(f).get("judge_prompt", {}).get("sha256")
+    except (OSError, ValueError):
+        return
+    if previous and previous != record["sha256"]:
+        print(f"WARNING: results/{os.path.basename(out_path)} was written with a "
+              f"different judge prompt ({previous}; this run is {record['sha256']}).\n"
+              f"         This run will replace it. Stop now and pass --tag <label> "
+              f"to keep both.")
 
 
 # ------------------------------------------------------------------ judge
@@ -180,7 +219,8 @@ def winrate_ci(wins, n):
 def run_pointwise(res, samples, rubric_text, args, key, client):
     name = res["model"]
     print(f"pointwise: {len(samples)} samples of '{name}' against the '{args.rubric}' "
-          f"rubric ({'MOCK' if args.mock else args.model})")
+          f"rubric{f' [{args.tag}]' if args.tag else ''} "
+          f"({'MOCK' if args.mock else args.model})")
     scores = []
     for i, s in enumerate(samples):
         scores.append(score_one(s["text"], rubric_text, args, key) | {"index": s["index"]})
@@ -195,7 +235,9 @@ def run_pointwise(res, samples, rubric_text, args, key, client):
     if client:
         # Attach each score to the generation's trace, so the traces view
         # shows every sample beside its grades.
-        feedback = [{"id": s["trace_id"], "name": f"judge_{axis}_{args.rubric}",
+        # The score name carries the tag too: without it a Part 5 rerun
+        # would write the same names onto the same traces as Part 4.
+        feedback = [{"id": s["trace_id"], "name": f"judge_{axis}_{args.label}",
                      "value": float(sc[axis]), "reason": sc["comment"]}
                     for s, sc in zip(samples, scores) if s.get("trace_id") for axis in AXES]
         if feedback:
@@ -205,8 +247,7 @@ def run_pointwise(res, samples, rubric_text, args, key, client):
         else:
             print("opik: results JSON has no trace ids (eval.py ran with --no-opik), nothing to attach")
 
-    out = {"mode": "pointwise", "model": name, "scores": scores, "summary": summary}
-    return out, f"judge-{name}-{args.rubric}.json"
+    return {"mode": "pointwise", "model": name, "scores": scores, "summary": summary}
 
 
 def run_pairwise(res_a, res_b, samples_a, samples_b, rubric_text, args, key, client):
@@ -248,13 +289,12 @@ def run_pairwise(res_a, res_b, samples_a, samples_b, rubric_text, args, key, cli
                          input={"rubric": args.rubric, "model_a": name_a, "model_b": name_b,
                                 "index": c["index"]},
                          output={k: c[k] for k in ("verdict", "forward", "swapped", "flipped")},
-                         tags=["a2-pairwise", args.rubric])
+                         tags=["a2-pairwise", args.label])
         client.flush()
         print(f"opik: logged {n_pairs} pairwise-judgment traces")
 
-    out = {"mode": "pairwise", "model_a": name_a, "model_b": name_b,
-           "comparisons": comparisons, "summary": summary}
-    return out, f"judge-{name_a}-vs-{name_b}-{args.rubric}.json"
+    return {"mode": "pairwise", "model_a": name_a, "model_b": name_b,
+            "comparisons": comparisons, "summary": summary}
 
 
 def main():
@@ -265,9 +305,16 @@ def main():
     ap.add_argument("--rubric", required=True, choices=sorted(RUBRICS))
     ap.add_argument("--model", default="gemini-2.5-flash")
     ap.add_argument("--limit", type=int, default=None, help="judge only the first N samples")
+    ap.add_argument("--tag", default=None,
+                    help="label for this run, added to the output filename and the Opik "
+                         "score names (Part 5: --tag paraphrase, --tag axes-reordered)")
     ap.add_argument("--mock", action="store_true", help="deterministic fake scores, no API key needed")
     ap.add_argument("--no-opik", action="store_true")
     args = ap.parse_args()
+    if args.tag:
+        args.tag = re.sub(r"[^A-Za-z0-9._-]+", "-", args.tag).strip("-")
+    # Everything that names this run's output uses the rubric plus the tag.
+    args.label = f"{args.rubric}-{args.tag}" if args.tag else args.rubric
 
     key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if not args.mock and not key:
@@ -288,18 +335,31 @@ def main():
             print(f"opik: unavailable ({type(e).__name__}: {e}); "
                   f"scores will only be printed and written to JSON")
 
+    res_b = None
     if args.results_b:
         with open(args.results_b, encoding="utf-8") as f:
             res_b = json.load(f)
-        out, filename = run_pairwise(res_a, res_b, samples_a, res_b["samples"][:args.limit],
-                                     rubric_text, args, key, client)
+        record = prompt_record(PAIRWISE_PROMPT, rubric_text)
+        filename = f"judge-{res_a['model']}-vs-{res_b['model']}-{args.label}.json"
     else:
-        out, filename = run_pointwise(res_a, samples_a, rubric_text, args, key, client)
+        record = prompt_record(POINTWISE_PROMPT, rubric_text)
+        filename = f"judge-{res_a['model']}-{args.label}.json"
 
-    out = {"rubric": args.rubric, "judge_model": "mock" if args.mock else args.model,
-           "mock": args.mock} | out
+    # Named and checked before any judging, so a clobber is reported while
+    # it can still be avoided.
     out_path = os.path.join(HERE, "results", filename)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    warn_if_prompt_differs(out_path, record)
+
+    if res_b is not None:
+        out = run_pairwise(res_a, res_b, samples_a, res_b["samples"][:args.limit],
+                           rubric_text, args, key, client)
+    else:
+        out = run_pointwise(res_a, samples_a, rubric_text, args, key, client)
+
+    out = {"rubric": args.rubric, "tag": args.tag,
+           "judge_model": "mock" if args.mock else args.model,
+           "mock": args.mock, "judge_prompt": record} | out
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)
     print(f"wrote {out_path}")

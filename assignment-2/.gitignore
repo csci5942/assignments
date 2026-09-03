@@ -4,7 +4,7 @@ data-tinystories/
 # eval.py / judge.py output.
 results/
 
-# Instructor twin run (students train their own into ../01-shakespeare/out/).
+# Instructor twin run (you train your own into ../assignment-1/out/).
 runs/
 
 __pycache__/
