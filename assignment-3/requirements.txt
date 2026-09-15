@@ -1,0 +1,30 @@
+# CSCI 5942 Assignment 3  (Python 3.10+)
+#
+#   python -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+#
+# PySpark also needs a Java 17+ runtime, which pip cannot install.
+# Run `python check_env.py` after installing; it checks for one and
+# tells you how to get it.
+
+# --- the pipeline ---------------------------------------------------
+pyspark==4.2.0          # pinned: the runtime table in the README is measured on this
+pyarrow>=15.0
+pandas>=2.1,<3         # capped: pyspark 4.2 warns it does not fully support pandas 3.x
+
+# --- the model (assignment 1's, unchanged) --------------------------
+torch>=2.2
+numpy>=1.26,<3
+
+# --- fetching the corpus --------------------------------------------
+requests>=2.31
+tqdm>=4.66
+
+# --- optional, nothing in the handout imports them ------------------
+# tokenizers: if you experiment with a different vocabulary in Part 3.
+# matplotlib: if you want figures in your report. Tables are fine.
+tokenizers>=0.20
+matplotlib>=3.8
+
+# --- tests ----------------------------------------------------------
+pytest>=8.0
