@@ -24,6 +24,7 @@ Related resources:
 | **A1** | Transformers on Shakespeare, from scratch | 8/27 | [README_A1.md](./assignment-1/README.md) | 9/03 11:59 PM |
 | **A2** | Evaluation | 9/3 | [README_A2.md](./assignment-2/README.md) | 9/15 11:59 PM |
 | **A3** | Data Pipelines| 9/15 | [README_A3.md](./assignment-3/README.md) | 9/24 11:59 PM |
+| **A4** | Distributed Training | 9/24 | [README_A4.md](./assignment-4/README.md) | 10/6 11:59 PM |
 
 Release dates follow the [course schedule](https://csci5942.github.io/schedule/).
 Due dates are announced in Slack and are authoritative on Gradescope.

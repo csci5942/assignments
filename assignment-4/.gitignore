@@ -1,0 +1,28 @@
+# --- the corpus -------------------------------------------------------
+# Tokenized shards are 19 GB and live on /work/nvme, not in git. They are
+# rebuilt with tools/prepare_fineweb.py, which IS tracked -- the recipe
+# is the artifact, not the output.
+*.bin
+*.parquet
+data/
+raw/
+fineweb/
+
+# --- training output --------------------------------------------------
+# Checkpoints, logs and summary.json from every run. Report the numbers,
+# do not commit the runs.
+out/
+logs/
+*.pt
+*.ckpt
+
+# --- environments and caches -----------------------------------------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# --- generated figures ------------------------------------------------
+*.png
+*.pdf

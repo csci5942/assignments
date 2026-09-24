@@ -1,0 +1,20 @@
+{
+  "name": "verify",
+  "n_layer": 4,
+  "n_embd": 256,
+  "n_head": 4,
+  "block_size": 256,
+  "vocab_size": 50304,
+  "dropout": 0.1,
+  "bias": false,
+  "global_batch": 16,
+  "micro_batch": 4,
+  "lr": 0.0006,
+  "lr_min": 6e-05,
+  "warmup_steps": 5,
+  "weight_decay": 0.1,
+  "grad_clip": 1.0,
+  "beta1": 0.9,
+  "beta2": 0.95,
+  "seed": 1337
+}
