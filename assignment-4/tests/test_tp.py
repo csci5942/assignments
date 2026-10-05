@@ -163,6 +163,7 @@ def _head_divisibility_body(rank, world):
                     n_embd=48, dropout=0.0)
     with pytest.raises(ValueError, match="n_head"):
         TensorParallelAttention(bad, group=mesh.tp_group)
+    torch.distributed.barrier()
 
 
 def test_uneven_head_split_is_refused():
