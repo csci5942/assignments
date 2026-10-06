@@ -1,0 +1,9 @@
+out/
+results/
+handout/
+knee.png
+__pycache__/
+.pytest_cache/
+.venv/
+logs/
+data/e2e/

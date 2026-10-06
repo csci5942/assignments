@@ -1,0 +1,12 @@
+{
+  "name": "gpt2-medium-full",
+  "model": "gpt2-medium",
+  "mode": "full",
+  "lr": 5e-05,
+  "weight_decay": 0.0,
+  "epochs": 1,
+  "batch": 16,
+  "warmup_steps": 100,
+  "grad_clip": 1.0,
+  "seed": 1337
+}

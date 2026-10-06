@@ -1,0 +1,8 @@
+torch>=2.4
+numpy
+tiktoken
+safetensors
+huggingface_hub
+sacrebleu
+matplotlib
+pytest
