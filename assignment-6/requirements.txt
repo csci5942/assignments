@@ -1,0 +1,6 @@
+torch>=2.5
+numpy
+tiktoken
+safetensors
+huggingface_hub
+pytest
