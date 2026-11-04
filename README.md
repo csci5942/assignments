@@ -27,6 +27,7 @@ Related resources:
 | **A4** | Distributed Training | 9/24 | [README_A4.md](./assignment-4/README.md) | 10/6 11:59 PM |
 | **A5** | PEFT vs FFT | 10/06 | [README_A5.md](./assignment-5/README.md) | 10/20 11:59 PM |
 | **A6** | Serving GPT-2 | 10/20 | [README_A6.md](./assignment-6/README.md) | 11/3 11:59 PM |
+| **A7** | RLAIF | 11/3 | [README_A7.md](./assignment-7/README.md) | 11/17 11:59 PM |
 
 Release dates follow the [course schedule](https://csci5942.github.io/schedule/).
 Due dates are announced in Slack and are authoritative on Gradescope.
