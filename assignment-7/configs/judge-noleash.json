@@ -1,0 +1,13 @@
+{
+  "name": "judge-noleash",
+  "init": "out/sft",
+  "rubric": "given",
+  "steps": 100,
+  "prompts_per_step": 8,
+  "group": 8,
+  "temperature": 1.0,
+  "max_new": 64,
+  "beta": 0.0,
+  "lr": 5e-06,
+  "seed": 1337
+}

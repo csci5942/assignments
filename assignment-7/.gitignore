@@ -1,0 +1,11 @@
+/out/
+/results/
+/handout/
+__pycache__/
+.pytest_cache/
+.venv/
+logs/
+data/e2e/
+*.png
+reference-phase*.log
+!reference*/curves.png
